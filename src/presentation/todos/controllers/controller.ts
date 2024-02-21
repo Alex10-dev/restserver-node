@@ -1,6 +1,7 @@
 import { Request, Response } from "express"
 import { prisma } from "../../../data/postgres";
 import { CreateTodoDTO } from "../../../domain/dtos/todos/create-todo.dto";
+import { UpdateTodoDTO } from "../../../domain/dtos/todos/update-todo.dto";
 
 export class TodoController {
 
@@ -33,7 +34,7 @@ export class TodoController {
     public createNewTodo = async( req: Request, res: Response ) => {
 
        // const { text } = req.body;
-       const [error, createTodoDTO] = CreateTodoDTO.create(req.body);
+       const [error, createTodoDTO] = CreateTodoDTO.createFromRequestBody(req.body);
        if( error ) return res.status(400).json({ error });
 
        /* if( !text ) return res.status(400).json({
@@ -47,7 +48,7 @@ export class TodoController {
        res.status(200).json( newTodo );
     };
 
-    public updateTodo = async( req: Request, res: Response ) => {
+    /*public updateTodo = async( req: Request, res: Response ) => {
 
         const id = Number(req.params.id);
         const { text } = req.body;
@@ -63,6 +64,30 @@ export class TodoController {
             res.status(400).json({
                 error: error,
             })
+        }
+    };*/
+
+    public updateTodo = async( req: Request, res: Response ) => {
+
+        const id = Number(req.params.id);
+        const [ error, updateTodoDTO ] = UpdateTodoDTO.createFromRequestBody({...req.body, id});
+        
+        if( error ) return res.status(400).json({ error });
+
+        try {
+            // const { text, completedAt } = updateTodoDTO!.getData;
+            const updateTodo = await prisma.todo.update({
+                where: { id: updateTodoDTO!.id, },
+                data: { 
+                    text: updateTodoDTO!.text,
+                    completedAt: updateTodoDTO!.completedAt,
+                }
+            });
+
+            return res.status(200).json(updateTodo);
+
+        } catch ( error ) {
+            res.status(400).json({ error: error, msg: 'algo salio mal' });
         }
     };
 
