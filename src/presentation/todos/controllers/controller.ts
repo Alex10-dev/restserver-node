@@ -2,70 +2,44 @@ import { Request, Response } from "express"
 import { prisma } from "../../../data/postgres";
 import { CreateTodoDTO } from "../../../domain/dtos/todos/create-todo.dto";
 import { UpdateTodoDTO } from "../../../domain/dtos/todos/update-todo.dto";
+import { TodoRepository } from "../../../domain/repositories/todo.repository";
 
 export class TodoController {
 
-    constructor(){}
+    constructor(
+        private readonly todoRepository: TodoRepository,
+    ){}
 
     public getTodos = async(req: Request, res: Response) => {
 
-        const todos = await prisma.todo.findMany();
-
-        return res.status(200).json( todos );
+        const todos = await this.todoRepository.getAll();
+        return res.json( todos );
     };
 
     public getTodoById = async(req: Request, res: Response) => {
 
         const id = Number(req.params.id);
 
-        const todo = await prisma.todo.findUnique({
-            where: {
-                id: id
-            }
-        })
-
-        if( !todo ) return res.status(200).json({
-            message: `Object with id: ${id} doesn't exist in the database`,
-        });
-
-        return res.status(200).json( todo );
+        try {
+            const todo = await this.todoRepository.findById( id );
+            res.status(200).json(todo);
+        } catch(error) {
+            res.status(400).json(error);
+        }
     };
 
     public createNewTodo = async( req: Request, res: Response ) => {
-
-       // const { text } = req.body;
-       const [error, createTodoDTO] = CreateTodoDTO.createFromRequestBody(req.body);
-       if( error ) return res.status(400).json({ error });
-
-       /* if( !text ) return res.status(400).json({
-        error: 'TEXT PROPERTY IS REQUIRED',
-       }); */
-
-       const newTodo = await prisma.todo.create({
-        data: createTodoDTO!
-       });
-
-       res.status(200).json( newTodo );
-    };
-
-    /*public updateTodo = async( req: Request, res: Response ) => {
-
-        const id = Number(req.params.id);
-        const { text } = req.body;
+        const [error, createTodoDTO] = CreateTodoDTO.createFromRequestBody(req.body);
+        if( error ) return res.status(400).json({ error });
+        
         try {
-            const updateTodo = await prisma.todo.update({
-                where: { id: id, },
-                data: { text: text, }
-            });
+            const todo = await this.todoRepository.create( createTodoDTO! );
+            res.status(200).json( todo );
 
-            return res.status(200).json(updateTodo);
-
-        } catch ( error ) {
-            res.status(400).json({
-                error: error,
-            })
+        } catch( error ){
+            res.status(400).json( error );
         }
-    };*/
+    };
 
     public updateTodo = async( req: Request, res: Response ) => {
 
@@ -75,16 +49,8 @@ export class TodoController {
         if( error ) return res.status(400).json({ error });
 
         try {
-            // const { text, completedAt } = updateTodoDTO!.getData;
-            const updateTodo = await prisma.todo.update({
-                where: { id: updateTodoDTO!.id, },
-                data: { 
-                    text: updateTodoDTO!.text,
-                    completedAt: updateTodoDTO!.completedAt,
-                }
-            });
-
-            return res.status(200).json(updateTodo);
+            const todo = await this.todoRepository.updateById( updateTodoDTO! );
+            return res.status(200).json(todo);
 
         } catch ( error ) {
             res.status(400).json({ error: error, msg: 'algo salio mal' });
@@ -95,16 +61,11 @@ export class TodoController {
 
         const id = Number(req.params.id);
         try {
-            const deletedTodo = await prisma.todo.delete({
-                where: { id: id, },
-            });
-
+            const deletedTodo = await this.todoRepository.deleteById( id );
             return res.status(200).json(deletedTodo);
             
         } catch ( error ) {
-            res.status(400).json({
-                error: error,
-            })
+            res.status(400).json( error );
         }
     }
 }
