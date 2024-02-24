@@ -19,7 +19,8 @@ export class Server {
         this.routes = routes;
     }
 
-    private app = express();
+    public readonly app = express();
+    private serverListener?: any;
 
     async startServer() {
 
@@ -33,8 +34,12 @@ export class Server {
         //Routes
         this.app.use( this.routes );
         
-        this.app.listen(this.port, () => {
+        this.serverListener = this.app.listen(this.port, () => {
             console.log(`Server running on port: ${ this.port }`);
-        })
+        });
+    }
+
+    public closeServer() {
+        this.serverListener?.close();
     }
 }
